@@ -3,37 +3,40 @@ import requests
 
 app = Flask(__name__)
 
+# Garena Client Headers simulator
+GARENA_HEADERS = {
+    'User-Agent': 'Dalvik/2.1.0 (Linux; U; Android 11; SM-A515F Build/RP1A.200720.012)',
+    'Connection': 'Keep-Alive',
+    'Accept-Encoding': 'gzip',
+    'Content-Type': 'application/x-www-form-urlencoded'
+}
+
 @app.route('/api/info', methods=['GET'])
-def get_full_player_info():
+def get_player_info():
     uid = request.args.get('uid')
-    region = request.args.get('region', 'ind')
+    region = request.args.get('region', 'ind').lower()
 
     if not uid:
         return jsonify({'error': 'UID is required'}), 400
 
-    # ফ্রি ফায়ার প্লেয়ার ইনফো ফেচ করার সরাসরি সচল API
-    target_url = f'https://free-fire-api-five.vercel.app/api/v1/info?uid={uid}&region={region}'
-
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'application/json',
-    }
+    # ফ্রি ফায়ারের গেম সার্ভার এন্ডপয়েন্ট (Region ভিত্তিক)
+    if region == 'ind':
+        url = f'https://ff-profile-api-india.vercel.app/api/info?uid={uid}'
+    else:
+        url = f'https://ff-profile-api-india.vercel.app/api/info?uid={uid}&region={region}'
 
     try:
-        response = requests.get(target_url, headers=headers, timeout=10)
-
+        # সরাসরি রিকোয়েস্ট পাঠানো
+        response = requests.get(url, headers=GARENA_HEADERS, timeout=12)
+        
         if response.status_code == 200:
             data = response.json()
             return jsonify(data), 200
         else:
-            # অন্য একটি সচল ব্যাকআপ এন্ডপয়েন্ট দিয়ে চেষ্টা করা
-            backup_url = f'https://ff-api-endpoint.vercel.app/api/info?uid={uid}&region={region}'
-            res_backup = requests.get(backup_url, headers=headers, timeout=10)
-            if res_backup.status_code == 200:
-                return jsonify(res_backup.json()), 200
-            
-            return jsonify({'error': 'Player profile not found'}), 404
+            return jsonify({'error': 'Player profile not found or Garena server issue'}), 404
 
+    except requests.exceptions.Timeout:
+        return jsonify({'error': 'Server request timeout'}), 504
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
