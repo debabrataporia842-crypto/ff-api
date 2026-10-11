@@ -11,32 +11,27 @@ def get_full_player_info():
     if not uid:
         return jsonify({'error': 'UID is required'}), 400
 
-    # বিকল্প এবং সচল একটি ফ্রি ফায়ার API এন্ডপয়েন্ট
-    target_url = f'https://ff-api-endpoint.vercel.app/api/info?uid={uid}&region={region}'
+    # ফ্রি ফায়ার প্লেয়ার ইনফো ফেচ করার সরাসরি সচল API
+    target_url = f'https://free-fire-api-five.vercel.app/api/v1/info?uid={uid}&region={region}'
 
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'application/json',
     }
 
     try:
-        response = requests.get(target_url, headers=headers, timeout=12)
+        response = requests.get(target_url, headers=headers, timeout=10)
 
         if response.status_code == 200:
             data = response.json()
-            # যদি ডেটা সরাসরি রুট অবজেক্টে বা basicInfo তে থাকে
-            basic = data.get('basicInfo', data)
-            
-            full_data = {
-                'basicInfo': basic,
-                'clanBasicInfo': data.get('clanBasicInfo', {}),
-                'socialInfo': data.get('socialInfo', {}),
-                'captainBasicInfo': data.get('captainBasicInfo', {}),
-                'creditScoreInfo': data.get('creditScoreInfo', {}),
-                'petInfo': data.get('petInfo', {}),
-            }
-            return jsonify(full_data), 200
+            return jsonify(data), 200
         else:
+            # অন্য একটি সচল ব্যাকআপ এন্ডপয়েন্ট দিয়ে চেষ্টা করা
+            backup_url = f'https://ff-api-endpoint.vercel.app/api/info?uid={uid}&region={region}'
+            res_backup = requests.get(backup_url, headers=headers, timeout=10)
+            if res_backup.status_code == 200:
+                return jsonify(res_backup.json()), 200
+            
             return jsonify({'error': 'Player profile not found'}), 404
 
     except Exception as e:
@@ -45,4 +40,3 @@ def get_full_player_info():
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
     
-  
